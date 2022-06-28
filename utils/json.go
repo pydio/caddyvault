@@ -47,8 +47,10 @@ type Options struct {
 // FormatResult unmarshals in to Result type
 func FormatResult(data []byte) Result {
 	var v Result
-	if err := json.Unmarshal(data, &v); err != nil {
-		panic(err)
+	if len(data) > 0 {
+		if err := json.Unmarshal(data, &v); err != nil {
+			panic(err)
+		}
 	}
 	return v
 }

@@ -1,17 +1,19 @@
 package caddyvault_test
 
 import (
+	"context"
 	"os"
 	"path"
 	"testing"
 
-	"github.com/siva-chegondi/caddyvault"
+	"github.com/pydio/caddyvault"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	certPath     string
 	vaultStorage *caddyvault.VaultStorage
+	ctx          = context.Background()
 )
 
 const certData = `
@@ -34,7 +36,7 @@ AIU+2GKjyT3iMuzZxxFxPFMCAwEAAQ==
 // This will run before
 // running every test case
 func TestMain(m *testing.M) {
-	os.Setenv("CADDY_CLUSTERING_VAULT_KEY", "s.1Dcdj2KeQbIbuibwGEhSBrQM")
+	os.Setenv("CADDY_CLUSTERING_VAULT_KEY", "test_vault_token")
 	os.Setenv("CADDY_CLUSTERING_VAULT_ENDPOINT", "http://localhost:8200")
 
 	vaultStorage = &caddyvault.VaultStorage{
@@ -49,45 +51,45 @@ func TestMain(m *testing.M) {
 * Following were test cases *
 ****************************/
 func TestStore(t *testing.T) {
-	err := vaultStorage.Store(certPath, []byte(certData))
+	err := vaultStorage.Store(ctx, certPath, []byte(certData))
 	assert.NoError(t, err, "should store data")
 }
 
 func TestLoad(t *testing.T) {
-	dataInBytes, _ := vaultStorage.Load(certPath)
+	dataInBytes, _ := vaultStorage.Load(ctx, certPath)
 	assert.Equal(t, certData, string(dataInBytes), "Did not found items")
 }
 
 func TestExists(t *testing.T) {
-	status := vaultStorage.Exists(certPath)
+	status := vaultStorage.Exists(ctx, certPath)
 	assert.True(t, status, "should exists")
 }
 
 func TestStat(t *testing.T) {
-	keyInfo, err := vaultStorage.Stat(certPath)
+	keyInfo, err := vaultStorage.Stat(ctx, certPath)
 	assert.NoError(t, err, "should not fail")
 	assert.Equal(t, int64(len(certData)), keyInfo.Size, "key sizes should match")
 }
 
 func TestList(t *testing.T) {
-	list, err := vaultStorage.List(certPath, false)
+	list, err := vaultStorage.List(ctx, certPath, false)
 	assert.NoError(t, err, "should not fail listing")
 	assert.NotEmpty(t, list, "list should not be empty")
 }
 
 func TestLock(t *testing.T) {
-	err := vaultStorage.Lock(certPath)
+	err := vaultStorage.Lock(ctx, certPath)
 	assert.NoError(t, err, "should not fail to lock")
-	err = vaultStorage.Lock(certPath)
+	err = vaultStorage.Lock(ctx, certPath)
 	assert.Error(t, err, "should fail to lock")
 }
 
 func TestUnlock(t *testing.T) {
-	err := vaultStorage.Unlock(certPath)
+	err := vaultStorage.Unlock(ctx, certPath)
 	assert.NoError(t, err, "should not fail to unlock")
 }
 
 func TestDelete(t *testing.T) {
-	err := vaultStorage.Delete(certPath)
+	err := vaultStorage.Delete(ctx, certPath)
 	assert.NoError(t, err, "Should delete check")
 }
