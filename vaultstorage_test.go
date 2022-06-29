@@ -36,11 +36,9 @@ AIU+2GKjyT3iMuzZxxFxPFMCAwEAAQ==
 // This will run before
 // running every test case
 func TestMain(m *testing.M) {
-	os.Setenv("CADDY_CLUSTERING_VAULT_KEY", "test_vault_token")
-	os.Setenv("CADDY_CLUSTERING_VAULT_ENDPOINT", "http://localhost:8200")
-
+	os.Setenv("VAULT_TOKEN", "test_vault_token")
 	vaultStorage = &caddyvault.VaultStorage{
-		API: os.Getenv("CADDY_CLUSTERING_VAULT_ENDPOINT"),
+		API: "http://localhost:8200",
 	}
 
 	certPath = path.Join("acme", "acme-v02.api.letsencrypt.org", "sites", "tls", "tls.crt")
@@ -51,28 +49,28 @@ func TestMain(m *testing.M) {
 * Following were test cases *
 ****************************/
 func TestStore(t *testing.T) {
-	err := vaultStorage.Store(ctx, certPath, []byte(certData))
+	err := vaultStorage.Store(certPath, []byte(certData))
 	assert.NoError(t, err, "should store data")
 }
 
 func TestLoad(t *testing.T) {
-	dataInBytes, _ := vaultStorage.Load(ctx, certPath)
+	dataInBytes, _ := vaultStorage.Load(certPath)
 	assert.Equal(t, certData, string(dataInBytes), "Did not found items")
 }
 
 func TestExists(t *testing.T) {
-	status := vaultStorage.Exists(ctx, certPath)
+	status := vaultStorage.Exists(certPath)
 	assert.True(t, status, "should exists")
 }
 
 func TestStat(t *testing.T) {
-	keyInfo, err := vaultStorage.Stat(ctx, certPath)
+	keyInfo, err := vaultStorage.Stat(certPath)
 	assert.NoError(t, err, "should not fail")
 	assert.Equal(t, int64(len(certData)), keyInfo.Size, "key sizes should match")
 }
 
 func TestList(t *testing.T) {
-	list, err := vaultStorage.List(ctx, certPath, false)
+	list, err := vaultStorage.List(certPath, false)
 	assert.NoError(t, err, "should not fail listing")
 	assert.NotEmpty(t, list, "list should not be empty")
 }
@@ -85,11 +83,11 @@ func TestLock(t *testing.T) {
 }
 
 func TestUnlock(t *testing.T) {
-	err := vaultStorage.Unlock(ctx, certPath)
+	err := vaultStorage.Unlock(certPath)
 	assert.NoError(t, err, "should not fail to unlock")
 }
 
 func TestDelete(t *testing.T) {
-	err := vaultStorage.Delete(ctx, certPath)
+	err := vaultStorage.Delete(certPath)
 	assert.NoError(t, err, "Should delete check")
 }

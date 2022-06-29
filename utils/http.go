@@ -8,8 +8,15 @@ import (
 	"time"
 )
 
+var (
+	Token string
+)
+
 func prepareRequest(vaultEndpoint, method string, data []byte) (*http.Client, *http.Request) {
-	vaultKey := os.Getenv("CADDY_CLUSTERING_VAULT_KEY")
+	t := os.Getenv("VAULT_TOKEN")
+	if Token != "" {
+		t = Token
+	}
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -17,7 +24,7 @@ func prepareRequest(vaultEndpoint, method string, data []byte) (*http.Client, *h
 	if err != nil {
 		panic(err)
 	}
-	req.Header.Add("X-Vault-Token", vaultKey)
+	req.Header.Add("X-Vault-Token", t)
 	return httpClient, req
 }
 
