@@ -105,7 +105,7 @@ func (vs *VaultStorage) buildURL(u string, key ...string) string {
 }
 
 // List lists certificates
-func (vs *VaultStorage) List(prefix string, recursive bool) ([]string, error) {
+func (vs *VaultStorage) List(ctx context.Context, prefix string, recursive bool) ([]string, error) {
 	var list []string
 	if recursive {
 		list = listPath(vs.buildURL(metaURL), vs.buildURL(dataURL), prefix)
@@ -120,7 +120,7 @@ func (vs *VaultStorage) List(prefix string, recursive bool) ([]string, error) {
 }
 
 // Load retrieves certificate of key
-func (vs *VaultStorage) Load(key string) ([]byte, error) {
+func (vs *VaultStorage) Load(ctx context.Context, key string) ([]byte, error) {
 	res := utils.QueryStore(vs.buildURL(dataURL, key))
 	if len(res.Data.Data) == 0 {
 		return []byte{}, os.ErrNotExist
@@ -129,7 +129,7 @@ func (vs *VaultStorage) Load(key string) ([]byte, error) {
 }
 
 // Store stores certificate with key association
-func (vs *VaultStorage) Store(key string, value []byte) error {
+func (vs *VaultStorage) Store(ctx context.Context, key string, value []byte) error {
 	data := make(map[string]string)
 	data[key] = string(value)
 	req := &utils.Request{
@@ -144,15 +144,15 @@ func (vs *VaultStorage) Store(key string, value []byte) error {
 }
 
 // Exists returns existance of certificate with key
-func (vs *VaultStorage) Exists(key string) bool {
+func (vs *VaultStorage) Exists(ctx context.Context, key string) bool {
 	res := utils.QueryStore(vs.buildURL(dataURL, key))
 	return len(res.Data.Data) > 0 && !res.Data.Metadata.Destroyed
 }
 
 // Stat retrieves status of certificate with key param
-func (vs *VaultStorage) Stat(key string) (certmagic.KeyInfo, error) {
+func (vs *VaultStorage) Stat(ctx context.Context, key string) (certmagic.KeyInfo, error) {
 	res := utils.QueryStore(vs.buildURL(dataURL, key))
-	_, err := vs.List(key, false)
+	_, err := vs.List(ctx, key, false)
 	modified, merror := time.Parse(time.RFC3339, res.Data.Metadata.CreatedTime)
 	return certmagic.KeyInfo{
 		Key:        key,
@@ -196,13 +196,13 @@ func queryPath(url, prefix string) []string {
 func (vs *VaultStorage) Lock(c context.Context, key string) error {
 	key = key + ".lock"
 
-	if vs.Exists(key) {
+	if vs.Exists(c, key) {
 
-		if stat, err := vs.Stat(key); err == nil {
+		if stat, err := vs.Stat(c, key); err == nil {
 
 			// check for deadlock, wait for 5 (300s) minutes
 			if time.Now().Unix()-stat.Modified.Unix() > 60 {
-				_ = vs.Unlock(key)
+				_ = vs.Unlock(c, key)
 			} else {
 				return errors.New("Lock already exists")
 			}
@@ -215,15 +215,15 @@ func (vs *VaultStorage) Lock(c context.Context, key string) error {
 }
 
 // Unlock unlocks operations on certificate data
-func (vs *VaultStorage) Unlock(key string) error {
+func (vs *VaultStorage) Unlock(ctx context.Context, key string) error {
 	if strings.Index(key, ".lock") < 0 {
 		key = key + ".lock"
 	}
-	return vs.Delete(key)
+	return vs.Delete(ctx, key)
 }
 
 // Delete deletes the certificate from vault.
-func (vs *VaultStorage) Delete(key string) error {
+func (vs *VaultStorage) Delete(ctx context.Context, key string) error {
 	response, err := utils.DeleteStore(vs.buildURL(metaURL, key))
 	if len(response.Errors) > 0 {
 		return errors.New("Failed to delete" + response.Errors[0])
